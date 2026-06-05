@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Integrations/">
+    <Project Path="BasicChatbot.Integrations/BasicChatbot.Integrations.Groq/BasicChatbot.Integrations.Groq.csproj" />
+  </Folder>
+  <Project Path="BasicChatbot.Common.Models/BasicChatbot.Common.Models.csproj" />
+  <Project Path="BasicChatBot.Models/BasicChatbot.Models.csproj" />
+  <Project Path="BasicChatbot.Service/BasicChatbot.Service.csproj" />
+  <Project Path="BasicChatbot/BasicChatbot.API.csproj" />
+</Solution>
