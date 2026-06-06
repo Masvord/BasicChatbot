@@ -1,5 +1,4 @@
-﻿using BasicChatbot.Models.Requests;
-using Microsoft.AspNetCore.Components.Forms;
+using BasicChatbot.Models.Requests;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BasicChatbot.API.Controllers;
@@ -69,8 +68,16 @@ public class ChatbotController(IServiceProvider serviceProvider) : BaseControlle
 
 		#region [ Set Result ]
 
+		if (!response.IsSuccess)
+		{
+			return StatusCode(500, new
+			{
+				error = response.ErrorMessage
+			});
+		}
+
 		// Take chatbot message
-		var responseMessage = response.choices.FirstOrDefault()?.message?.content ?? "There is no content";
+		var responseMessage = response.Data!.choices.FirstOrDefault()?.message?.content ?? "There is no content";
 
 		#endregion
 
