@@ -1,5 +1,6 @@
 using BasicChatbot.Models.Requests;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace BasicChatbot.API.Controllers;
 
@@ -14,33 +15,41 @@ public class ChatbotController(IServiceProvider serviceProvider) : BaseControlle
 		#region [ Validation ]
 
 		if (string.IsNullOrWhiteSpace(input.Message))
-			return BadRequest("Mesaj boş olamaz.");
+			return BadRequest("Message cannot be empty.");
 
 		#endregion
 
-		#region [ Chat History ]
+		#region [ Session Context ]
 
-		var allChat = (await _redisServiceClient.GetAllAsync())
-			.OrderBy(x => DateTime.ParseExact(x.Key, "d.MM.yyyy HH.mm.ss", null))
-			.ToDictionary(x => x.Key, x => x.Value);
+		// You can replace this with a unique value from the user's ID or Token in the future
+		string sessionKey = "ChatSession_FatihKara";
+		List<MessageContent> messages = [];
+
+		#endregion
+
+		#region [ Take Chat History ]
+
+		// Retrieve the previous chat history from Redis as a single JSON string
+		var historyJson = await _redisServiceClient.GetStringAsync(sessionKey);
+
+		if (!String.IsNullOrEmpty(historyJson))
+		{
+			// Deserialize the JSON back into a List<MessageContent> object to preserve the roles
+			messages = JsonSerializer.Deserialize<List<MessageContent>>(historyJson)
+				?? [];
+		}
 
 		#endregion
 
 		#region [ Create Service Model ]
 
-		// Take chat history from redis
-		var messages = allChat
-			.Where(x => x.Value is not null)
-			.Select(x => new MessageContent
-			{
-				Role = "assistant",
-				Content = x.Value!
-			})
-			.ToList();
+		// Add the user's NEW message to the list
+		messages.Add(new MessageContent
+		{
+			Role = "user",
+			Content = input.Message
+		});
 
-		messages.Add(new MessageContent { Role = "user", Content = input.Message });
-
-		// Add current message
 		var groqRequest = new MessageRequest
 		{
 			Model = "llama-3.3-70b-versatile",
@@ -51,22 +60,8 @@ public class ChatbotController(IServiceProvider serviceProvider) : BaseControlle
 
 		#region [ Service Call ]
 
-		// Send Messagge
+		// Send the message to Groq API
 		var response = await _groqServiceClient.SendMessageAsync(groqRequest);
-
-		#endregion
-
-		#region [ Redis Call for Last Message ]
-
-		// Set ket to current date time
-		var key = DateTime.Now.ToString().Replace(':', '.');
-
-		// Set value to redis with 1 hour expiration time
-		var redisResponse = _redisServiceClient.SetStringAsync(key, input.Message, new TimeSpan(1, 0, 0));
-
-		#endregion
-
-		#region [ Set Result ]
 
 		if (!response.IsSuccess)
 		{
@@ -76,8 +71,22 @@ public class ChatbotController(IServiceProvider serviceProvider) : BaseControlle
 			});
 		}
 
-		// Take chatbot message
 		var responseMessage = response.Data!.choices.FirstOrDefault()?.message?.content ?? "There is no content";
+
+		#endregion
+
+		#region [ Update History ]
+
+		// Add the AI's NEW response to the list to complete the history context
+		messages.Add(new MessageContent
+		{
+			Role = "assistant",
+			Content = responseMessage
+		});
+
+		// Serialize the entire updated list back to JSON and save it to Redis with a 1-hour expiration
+		var updatedHistoryJson = JsonSerializer.Serialize(messages);
+		await _redisServiceClient.SetStringAsync(sessionKey, updatedHistoryJson, TimeSpan.FromHours(1));
 
 		#endregion
 
