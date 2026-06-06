@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BasicChatbot.Integrations\BasicChatbot.Integrations.Groq\BasicChatbot.Integrations.Groq.csproj" />
     <ProjectReference Include="..\BasicChatBot.Models\BasicChatbot.Models.csproj" />
+    <ProjectReference Include="..\BasicChatbot.Service\BasicChatbot.Service.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 using BasicChatbot.API.DI;
+using BasicChatbot.Service.DI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add integration services
 builder.Services.AddIntegrationServices();
+
+// Add service layer
+builder.Services.AddServiceLayer(builder.Configuration);
 
 var app = builder.Build();
 
